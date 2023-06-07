@@ -1,0 +1,127 @@
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+
+# Load the dataset
+data = pd.read_csv('FIX.csv')
+
+# Label encode categorical attributes
+le = LabelEncoder()
+data['KATEGORI'] = le.fit_transform(data['KATEGORI'])
+data['PENERBIT'] = le.fit_transform(data['PENERBIT'])
+data['KODE BARANG'] = le.fit_transform(data['KODE BARANG'])
+data['NAMA BARANG'] = le.fit_transform(data['NAMA BARANG'])
+data['PRESENTASE'] = le.fit_transform(data['PRESENTASE'])
+data['LABEL'] = le.fit_transform(data['LABEL'])
+
+# Save the preprocessed data to a new CSV file
+data.to_csv('preprocessed_FIX.csv', index=False)
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import LabelEncoder
+
+# Load the preprocessed dataset
+data = pd.read_csv('preprocessed_FIX.csv')
+
+# Split the dataset into features and target
+X = data.drop('LABEL', axis=1) # replace target_column with the name of your target column
+y = data['LABEL'] # replace target_column with the name of your target column
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+print("Data Training:")
+print(X_train)
+print(y_train)
+
+# Menyimpan data training ke dalam file CSV
+df_train = pd.concat([pd.DataFrame(X_train), pd.DataFrame(y_train)], axis=1)
+df_train.to_csv("data_training.csv", index=False)
+
+print("Data Testing:")
+print(X_test)
+print(y_test)
+
+# Menyimpan data testing ke dalam file CSV
+df_test = pd.concat([pd.DataFrame(X_test), pd.DataFrame(y_test)], axis=1)
+df_test.to_csv("data_testing.csv", index=False)
+
+# Normalisasi Data
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# mencoba beberapa nilai K dan memilih yang memiliki performa terbaik
+best_accuracy = 0
+best_k = 0
+for k in range(3, 10):
+    knn = KNeighborsClassifier(n_neighbors=k)
+    knn.fit(X_train_scaled, y_train)
+    y_pred = knn.predict(X_test_scaled)
+    accuracy = accuracy_score(y_test, y_pred)
+    if accuracy > best_accuracy:
+        best_accuracy = accuracy
+        best_k = k
+
+print("Best K:", best_k)
+
+# Penerapan Algoritma KNN
+knn = KNeighborsClassifier(n_neighbors=best_k)
+knn.fit(X_train_scaled, y_train)
+
+# Melakukan prediksi pada data pengujian
+y_pred = knn.predict(X_test_scaled)
+
+# Menambahkan kolom PREDIKSI berisi hasil prediksi pada data test
+X_test['PREDIKSI'] = y_pred
+
+# Menyimpan data test dengan kolom prediksi ke dalam file CSV
+df_test_with_pred = pd.concat([X_test.reset_index(drop=True), pd.DataFrame(y_pred, columns=['PREDIKSI'])], axis=1)
+df_test_with_pred.to_csv("data_test_with_pred.csv", index=False)
+
+precision = precision_score(y_test, y_pred, average='macro', zero_division=1)
+recall = recall_score(y_test, y_pred, average='macro', zero_division=1)
+f1 = f1_score(y_test, y_pred, average='macro', zero_division=1)
+
+# Evaluate the performance of the classifier
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, average='weighted')
+recall = recall_score(y_test, y_pred, average='weighted')
+f1 = f1_score(y_test, y_pred, average='weighted')
+confusion = confusion_matrix(y_test, y_pred)
+
+cm = confusion_matrix(y_test, y_pred)
+accuracy = accuracy_score(y_test, y_pred)
+
+print('Accuracy:', accuracy)
+print('Precision:', precision)
+print('Recall:', recall)
+print('F1-score:', f1)
+print('Confusion matrix:\n', confusion)
+
+# Top 10 category
+top_10_kategori = data.groupby(['KATEGORI'])['TOTAL PENJUALAN'].sum().reset_index()
+top_10_kategori = top_10_kategori.sort_values(by='TOTAL PENJUALAN', ascending=False).head(10)
+
+print(top_10_kategori)
+
+X_test['PREDIKSI'] = ''
+
+# menambahkan kolom PREDIKSI berisi hasil prediksi pada data test
+X_test['PREDIKSI'] = y_pred
+
+# mengelompokkan data berdasarkan kategori dan menampilkan hasil prediksi untuk setiap kategori
+for kategori in X_test['KATEGORI'].unique():
+    print("Kategori:", kategori)
+    kategori_data = X_test[X_test['KATEGORI'] == kategori]
+    kategori_prediksi = kategori_data['PREDIKSI']
+    print("Hasil prediksi:")
+    print(kategori_prediksi.value_counts())
+    print()
+
+    
